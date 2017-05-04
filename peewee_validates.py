@@ -371,6 +371,25 @@ class Field:
         """
         return value
 
+    def get_value(self, name, data):
+        """
+        Get the value of this field from the data.
+        If there is a problem with the data, raise ValidationError.
+
+        :param name: Name of this field (to retrieve from data).
+        :param data: Dictionary of data for all fields.
+        :raises: ValidationError
+        :return: The value of this field.
+        :rtype: any
+        """
+        if name in data:
+            return data.get(name)
+        if self.default:
+            if callable(self.default):
+                return self.default()
+            return self.default
+        return None
+
     def validate(self, name, data):
         """
         Check to make sure ths data for this field is valid.
@@ -381,9 +400,7 @@ class Field:
         :param data: Dictionary of data for all fields.
         :raises: ValidationError
         """
-        if name not in data:
-            return
-        self.value = data[name]
+        self.value = self.get_value(name, data)
         if self.value is not None:
             self.value = self.coerce(self.value)
         for method in self.validators:
@@ -1001,7 +1018,7 @@ class FormatValidator(ModelValidator):
             if name in exclude or (only and name not in only):
                 del data[name]
         # This will set self.data which we should use from now on.
-        super(ModelValidator, self).validate(data=data, only=only, exclude=exclude)
+        super(ModelValidator, self).validate(data=data, only=list(data), exclude=exclude)
 
         return (not self.errors)
 
